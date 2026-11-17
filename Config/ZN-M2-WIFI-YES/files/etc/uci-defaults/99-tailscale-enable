@@ -1,0 +1,7 @@
+#!/bin/sh
+
+uci -q set tailscale.main.enabled='1' || exit 1
+uci commit tailscale || exit 1
+/etc/init.d/tailscale enable || exit 1
+
+exit 0

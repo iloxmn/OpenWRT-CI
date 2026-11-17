@@ -1,0 +1,4 @@
+config aria2 'main'
+	option enabled '1'
+	option user 'root'
+	option rpc_auth_method 'token'

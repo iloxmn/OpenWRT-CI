@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+
+if ! id smb >/dev/null 2>&1; then
+	adduser -D -H -s /bin/false smb
+fi
+
+printf '%s\n%s\n' 'smb' 'smb' | smbpasswd -s -a smb
+
+/etc/init.d/samba4 enable
