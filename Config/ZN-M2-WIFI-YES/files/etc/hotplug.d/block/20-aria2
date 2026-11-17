@@ -1,0 +1,23 @@
+#!/bin/sh
+
+DIR=$(uci -q get aria2.main.dir)
+[ -n "$DIR" ] || exit 0
+
+mounted() {
+	awk -v dir="$DIR" '$2 == dir { found = 1 } END { exit !found }' /proc/mounts
+}
+
+case "$ACTION" in
+	add)
+		mounted || exit 0
+		src=$(awk -v dir="$DIR" '$2 == dir { print $1; exit }' /proc/mounts)
+		[ "/dev/$DEVNAME" = "$src" ] || exit 0
+		logger -p daemon.info -t aria2-hotplug "download dir $DIR mounted on $src, starting"
+		/etc/init.d/aria2 start
+		;;
+	remove)
+		mounted && exit 0
+		logger -p daemon.info -t aria2-hotplug "$DIR gone, stopping"
+		/etc/init.d/aria2 stop
+		;;
+esac

@@ -1,0 +1,64 @@
+#!/bin/sh
+set -eu
+
+F=/etc/init.d/aria2
+MARK="# local override: do not autostart at boot"
+
+[ -f "$F" ] || { echo "找不到 $F，aria2 没装？" >&2; exit 1; }
+
+if uci -q show aria2 | grep -q '^aria2\.main='; then
+	if [ -z "$(uci -q get aria2.main.dir)" ]; then
+		uci set aria2.main.dir=/mnt/sda1
+		uci set aria2.main.enabled='1'
+		uci commit aria2
+	fi
+else
+	echo "没有 aria2.main 配置段，跳过默认下载目录设置" >&2
+fi
+
+if ! grep -qF "$MARK" "$F"; then
+	n=$(grep -n 'Please create download dir first' "$F" | cut -d: -f1 | head -n 1)
+	[ -n "$n" ] || { echo "在 $F 里找不到插入点，脚本版本可能变了，放弃" >&2; exit 1; }
+
+	tmp="/tmp/aria2.init.new.$$"
+	trap 'rm -f "$tmp"' EXIT HUP INT TERM
+	cp "$F" /tmp/aria2.init.orig
+	{
+		head -n "$n" "$F"
+		cat <<'GUARD'
+	case "$dir" in
+		/*)
+			local _m _ok=0
+			while read -r _d _m _t _o; do
+				case "$dir" in "$_m"|"$_m"/*) _ok=1 ;; esac
+			done < /proc/mounts
+			[ "$_ok" = "1" ] || { _err "Download dir '$dir' is not a mounted filesystem, refusing to start."; return 1; }
+			;;
+	esac
+GUARD
+		tail -n "+$((n + 1))" "$F"
+		cat <<'BOOT'
+
+# local override: do not autostart at boot; start on disk mount or manually
+boot() {
+	logger -p daemon.info -t aria2 "boot: autostart disabled, start on disk mount or manually"
+	return 0
+}
+BOOT
+	} > "$tmp"
+
+	if ! sh -n "$tmp"; then
+		echo "语法检查失败，未改动 $F" >&2
+		exit 1
+	fi
+	chmod 755 "$tmp"
+	mv "$tmp" "$F"
+fi
+
+mkdir -p /etc/crontabs
+CRON=/etc/crontabs/root
+if ! grep -qF 'trackers-update.sh' "$CRON" 2>/dev/null; then
+	echo '17 4 */3 * * /etc/trackers-update.sh' >> "$CRON"
+fi
+
+exit 0

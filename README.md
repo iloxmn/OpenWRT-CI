@@ -50,6 +50,8 @@ https://drive.wrt.moe/uboot/mediatek
 
 MEDIATEK系列、QUALCOMMAX系列、ROCKCHIP系列、X86系列。
 
+ZN-M2-WIFI-YES 固件默认将 aria2 下载目录设为 `/mnt/sda1`，磁盘挂载时启动 aria2、卸载时停止；BT tracker 定时更新。LAN DHCP 启用顺序分配，地址起始偏移为 2，最多租出 30 个地址。
+
 # 目录简要说明
 
 workflows——自定义CI配置

@@ -1,0 +1,14 @@
+#!/bin/sh
+set -eu
+
+if ! uci -q show dhcp.lan >/dev/null 2>&1; then
+	echo "找不到 dhcp.lan 配置段，未修改 DHCP 设置" >&2
+	exit 1
+fi
+
+uci set dhcp.lan.sequential_ip='1'
+uci set dhcp.lan.start='2'
+uci set dhcp.lan.limit='30'
+uci commit dhcp
+
+exit 0
